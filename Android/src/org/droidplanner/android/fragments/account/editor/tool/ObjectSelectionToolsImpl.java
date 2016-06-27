@@ -7,10 +7,17 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Toast;
 
+import com.o3dr.android.client.Drone;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.coordinate.LatLongAlt;
+import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.mission.MissionItemType;
 import com.o3dr.services.android.lib.drone.mission.item.MissionItem;
+import com.o3dr.services.android.lib.drone.mission.item.command.ReturnToLaunch;
+import com.o3dr.services.android.lib.drone.mission.item.command.Takeoff;
+import com.o3dr.services.android.lib.drone.mission.item.complex.Survey;
+import com.o3dr.services.android.lib.drone.mission.item.complex.SurveyDetail;
+import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.util.MathUtils;
 
 import org.droidplanner.android.R;
@@ -58,9 +65,6 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
         if (missionProxy != null) {
             if (points.size() == 4) {
 
-
-
-
                 HeightDialog dlg = new HeightDialog();
                 dlg.setListener(new HeightDialog.Listener() {
                     @Override
@@ -71,23 +75,17 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
                         missionProxy.addMissionItem(item);
                         missionProxy.addWaypointsWithAltitude(waypoints);
                         missionProxy.addWaypoint(waypoints.get(0));
+
+                        addTakeOffAndRTL(heightFlight);
                     }
                 });
+
+                LatLong droneLocation = getDroneLocation();
+                if(droneLocation != null){
+                    sortWaypoints(droneLocation, points);
+                }
                 dlg.show(editorToolsFragment.getFragmentManager(), "Höhe");
-                /*
-                LatLong point1 = points.get(0);
-                LatLong point2 = points.get(points.size() - 1);
-                LatLongAlt middle = new LatLongAlt((point1.getLatitude()+point2.getLatitude()) / 2 ,
-                                            (point1.getLongitude()+point2.getLongitude()) / 2,
-                                            10);
-                MissionItem item = MissionItemType.REGION_OF_INTEREST.getNewItem();
-                ((MissionItem.SpatialItem) item).setCoordinate(middle);
-                missionProxy.addMissionItem(item);
-                missionProxy.addWaypoint(point1);
-                missionProxy.addWaypoint(new LatLong(point1.getLatitude(), point2.getLongitude()));
-                missionProxy.addWaypoint(point2);
-                missionProxy.addWaypoint(new LatLong(point2.getLatitude(), point1.getLongitude()));
-                missionProxy.addWaypoint(point1);*/
+
             }
         }
         editorToolsFragment.setTool(EditorToolsFragment.EditorTools.NONE);
@@ -140,6 +138,55 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
             waypoints.add(wp);
         }
         return waypoints;
+    }
+
+    private void sortWaypoints(LatLong takeoff, List<LatLong> points){
+        int closestWaypoint = findClosestWaypoint(takeoff, points);
+        for(int i = 0; i < closestWaypoint; i++){
+            points.add(points.get(0));
+            points.remove(0);
+        }
+    }
+
+    private int findClosestWaypoint(LatLong takeoff, List<LatLong> points){
+        double min = Double.MAX_VALUE;
+        int minIndex = 0;
+        int i = 0;
+        for(LatLong point : points){
+            double dist = MathUtils.getDistance2D(takeoff, point);
+            if(dist < min) {
+                min = dist;
+                minIndex = i;
+            }
+            i++;
+        }
+        return minIndex;
+    }
+
+    public void addTakeOffAndRTL(double altitude) {
+        if (!missionProxy.isFirstItemTakeoff()) {
+            Takeoff takeOff = new Takeoff();
+            takeOff.setTakeoffAltitude(altitude);
+            missionProxy.addMissionItem(0, takeOff);
+        }
+
+        if (!missionProxy.isLastItemLandOrRTL()) {
+            ReturnToLaunch rtl = new ReturnToLaunch();
+            missionProxy.addMissionItem(rtl);
+        }
+    }
+
+    public LatLong getDroneLocation() {
+        Drone dpApi = editorToolsFragment.getDrone();
+        if (!dpApi.isConnected())
+            return null;
+
+        Gps gps = dpApi.getAttribute(AttributeType.GPS);
+        if (!gps.isValid()) {
+            return null;
+        }
+
+        return gps.getPosition();
     }
 
 

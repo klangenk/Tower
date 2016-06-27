@@ -100,10 +100,20 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 			LatLong point1 = path.get(0);
 			LatLong point2 = path.get(path.size() - 1);
 
-			rectPath.add(point1);
-			rectPath.add(new LatLong(point1.getLatitude(), point2.getLongitude()));
-			rectPath.add(point2);
-			rectPath.add(new LatLong(point2.getLatitude(), point1.getLongitude()));
+			LatLong min = new LatLong(
+					Math.min(point1.getLatitude(), point2.getLatitude()),
+					Math.min(point1.getLongitude(), point2.getLongitude())
+			);
+
+			LatLong max = new LatLong(
+					Math.max(point1.getLatitude(), point2.getLatitude()),
+					Math.max(point1.getLongitude(), point2.getLongitude())
+			);
+
+			rectPath.add(min);
+			rectPath.add(new LatLong(min.getLatitude(), max.getLongitude()));
+			rectPath.add(max);
+			rectPath.add(new LatLong(max.getLatitude(), min.getLongitude()));
 			path = rectPath;
 		}
 

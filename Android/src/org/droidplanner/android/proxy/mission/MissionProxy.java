@@ -343,7 +343,7 @@ public class MissionProxy implements DPMap.PathSource {
         notifyMissionUpdate();
     }
 
-    private void addMissionItem(int index, MissionItem missionItem) {
+    public void addMissionItem(int index, MissionItem missionItem) {
         missionItemProxies.add(index, new MissionItemProxy(this, missionItem));
         notifyMissionUpdate();
     }

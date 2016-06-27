@@ -47,7 +47,15 @@ public class CustomGestureOverlayView extends GestureOverlayView {
     }
 
     public void drawRect(PointF point1, PointF point2) {
-        this.rect.set((int)point1.x, (int)point1.y,(int)point2.x,(int)point2.y);
+        this.rect.set(
+                (int) Math.min(point1.x, point2.x),
+                (int) Math.min(point1.y, point2.y),
+                (int) Math.max(point1.x, point2.x),
+                (int) Math.max(point1.y, point2.y));
+    }
+
+    public Rect getRect(){
+        return this.rect;
     }
 
     public void removeRect() {
