@@ -5,12 +5,18 @@ import java.util.List;
 
 import org.droidplanner.android.R;
 import org.droidplanner.android.fragments.EditorMapFragment;
+import org.droidplanner.android.fragments.account.editor.tool.CustomGestureOverlayView;
 
 import android.gesture.GestureOverlayView;
 import android.gesture.GestureOverlayView.OnGestureListener;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PointF;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -21,7 +27,10 @@ import com.o3dr.services.android.lib.util.MathUtils;
 
 public class GestureMapFragment extends Fragment implements OnGestureListener {
 	private static final int TOLERANCE = 15;
-	private static final int STROKE_WIDTH = 3;
+	private static final int STROKE_WIDTH = 0;
+	private PointF gestureStart;
+	private PointF gestureEnd;
+
 
 	private double toleranceInPixels;
 
@@ -30,7 +39,7 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 		void onPathFinished(List<LatLong> path);
 	}
 
-	private GestureOverlayView overlay;
+	private CustomGestureOverlayView overlay;
 	private OnPathFinishedListener listener;
     private EditorMapFragment mapFragment;
 
@@ -49,7 +58,7 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
             fm.beginTransaction().add(R.id.gesture_map_fragment, mapFragment).commit();
         }
 
-        overlay = (GestureOverlayView) view.findViewById(R.id.overlay1);
+        overlay = (CustomGestureOverlayView) view.findViewById(R.id.overlay1);
         overlay.addOnGestureListener(this);
         overlay.setEnabled(false);
 
@@ -82,10 +91,32 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 	public void onGestureEnded(GestureOverlayView arg0, MotionEvent arg1) {
 		overlay.setEnabled(false);
 		List<LatLong> path = decodeGesture();
-		if (path.size() > 1) {
-			path = MathUtils.simplify(path, toleranceInPixels);
+		if(overlay.getMode() == CustomGestureOverlayView.GestureMode.FREE) {
+			if (path.size() > 1) {
+				path = MathUtils.simplify(path, toleranceInPixels);
+			}
+		}else if(overlay.getMode() == CustomGestureOverlayView.GestureMode.RECTANGLE){
+			List<LatLong> rectPath = new ArrayList<LatLong>();
+			LatLong point1 = path.get(0);
+			LatLong point2 = path.get(path.size() - 1);
+
+			rectPath.add(point1);
+			rectPath.add(new LatLong(point1.getLatitude(), point2.getLongitude()));
+			rectPath.add(point2);
+			rectPath.add(new LatLong(point2.getLatitude(), point1.getLongitude()));
+			path = rectPath;
 		}
+
+		//Canvas canvas = new Canvas();
+
+		//overlay.draw(canvas);
+
 		listener.onPathFinished(path);
+		overlay.removeRect();
+	}
+
+	public void setMode(CustomGestureOverlayView.GestureMode mode){
+		overlay.setMode(mode);
 	}
 
 	private List<LatLong> decodeGesture() {
@@ -103,6 +134,11 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 
 	@Override
 	public void onGesture(GestureOverlayView arg0, MotionEvent arg1) {
+		if(overlay.getMode() == CustomGestureOverlayView.GestureMode.RECTANGLE){
+			Log.v("Pos", String.format("%.4f %.4f", arg1.getX(), arg1.getY()));
+			gestureEnd.set(arg1.getX(), arg1.getY());
+			overlay.drawRect(gestureStart, gestureEnd);
+		}
 	}
 
 	@Override
@@ -111,6 +147,9 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 
 	@Override
 	public void onGestureStarted(GestureOverlayView arg0, MotionEvent arg1) {
+		gestureStart = new PointF(arg1.getX(), arg1.getY());
+		gestureEnd = new PointF(arg1.getX(), arg1.getY());
 	}
+
 
 }

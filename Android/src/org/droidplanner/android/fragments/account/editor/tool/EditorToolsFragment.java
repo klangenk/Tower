@@ -21,6 +21,7 @@ import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
 import org.droidplanner.android.R;
 import org.droidplanner.android.dialogs.SupportYesNoDialog;
 import org.droidplanner.android.fragments.helpers.ApiListenerFragment;
+import org.droidplanner.android.fragments.helpers.GestureMapFragment;
 import org.droidplanner.android.proxy.mission.MissionProxy;
 import org.droidplanner.android.proxy.mission.item.MissionItemProxy;
 import org.droidplanner.android.proxy.mission.item.adapters.AdapterMissionItems;
@@ -51,6 +52,8 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
         void skipMarkerClickEvents(boolean skip);
 
         void zoomToFitSelected();
+
+        void setGestureMode(CustomGestureOverlayView.GestureMode mode);
     }
 
     private static final IntentFilter eventFilter = new IntentFilter();
@@ -80,7 +83,7 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
 
     {
         editorToolsImpls[EditorTools.MARKER.ordinal()] = new MarkerToolsImpl(this);
-        editorToolsImpls[EditorTools.DRAW.ordinal()] = new DrawToolsImpl(this);
+        editorToolsImpls[EditorTools.DRAW.ordinal()] = new ObjectSelectionToolsImpl(this);
         editorToolsImpls[EditorTools.TRASH.ordinal()] = new TrashToolsImpl(this);
         editorToolsImpls[EditorTools.SELECTOR.ordinal()] = new SelectorToolsImpl(this);
         editorToolsImpls[EditorTools.NONE.ordinal()] = new NoneToolsImpl(this);
@@ -302,6 +305,7 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
         if (tool == EditorTools.NONE) {
             mEditorRadioGroup.clearCheck();
         }
+
 
         updateSubToolsVisibility();
 

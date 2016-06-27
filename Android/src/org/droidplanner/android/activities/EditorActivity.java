@@ -31,6 +31,7 @@ import org.droidplanner.android.dialogs.openfile.OpenFileDialog;
 import org.droidplanner.android.dialogs.openfile.OpenMissionDialog;
 import org.droidplanner.android.fragments.EditorListFragment;
 import org.droidplanner.android.fragments.EditorMapFragment;
+import org.droidplanner.android.fragments.account.editor.tool.CustomGestureOverlayView;
 import org.droidplanner.android.fragments.account.editor.tool.EditorToolsFragment;
 import org.droidplanner.android.fragments.account.editor.tool.EditorToolsFragment.EditorTools;
 import org.droidplanner.android.fragments.account.editor.tool.EditorToolsImpl;
@@ -540,6 +541,11 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         } else {
             planningMapFragment.zoomToFit(MissionProxy.getVisibleCoords(selected));
         }
+    }
+
+    @Override
+    public void setGestureMode(CustomGestureOverlayView.GestureMode mode) {
+        gestureMapFragment.setMode(mode);
     }
 
     @Override

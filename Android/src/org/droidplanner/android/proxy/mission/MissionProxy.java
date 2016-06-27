@@ -259,6 +259,17 @@ public class MissionProxy implements DPMap.PathSource {
         addMissionItems(missionItemsToAdd);
     }
 
+    public void addWaypointsWithAltitude(List<LatLongAlt> points) {
+        List<MissionItem> missionItemsToAdd = new ArrayList<MissionItem>(points.size());
+        for (LatLongAlt point : points) {
+            Waypoint waypoint = new Waypoint();
+            waypoint.setCoordinate(point);
+            missionItemsToAdd.add(waypoint);
+        }
+
+        addMissionItems(missionItemsToAdd);
+    }
+
     public double getLastAltitude() {
         if (!missionItemProxies.isEmpty()) {
             MissionItem lastItem = missionItemProxies.get(missionItemProxies.size() - 1).getMissionItem();
@@ -327,7 +338,7 @@ public class MissionProxy implements DPMap.PathSource {
         addMissionItem(splineWaypoint);
     }
 
-    private void addMissionItem(MissionItem missionItem) {
+    public void addMissionItem(MissionItem missionItem) {
         missionItemProxies.add(new MissionItemProxy(this, missionItem));
         notifyMissionUpdate();
     }
