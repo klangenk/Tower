@@ -120,9 +120,9 @@ android {
 
     signingConfigs {
         release {
-            storeFile file('C:/Users/Kevin/.android/debug.keystore')
+            storeFile getAppKeystoreFile()
             storePassword getAppKeystorePassword()
-            keyAlias 'debug'
+            keyAlias getAppKey()
             keyPassword getAppKeyPassword()
         }
     }
