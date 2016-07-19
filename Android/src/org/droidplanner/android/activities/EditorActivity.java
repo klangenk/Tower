@@ -5,8 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.FragmentManager;
+import android.support.v4.app.NavUtils;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.util.TypedValue;
@@ -19,14 +21,23 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.analytics.HitBuilders;
+import com.o3dr.android.client.Drone;
+import com.o3dr.android.client.apis.MissionApi;
+import com.o3dr.android.client.apis.VehicleApi;
 import com.o3dr.services.android.lib.coordinate.LatLong;
 import com.o3dr.services.android.lib.drone.attribute.AttributeEvent;
+import com.o3dr.services.android.lib.drone.attribute.error.CommandExecutionError;
 import com.o3dr.services.android.lib.drone.mission.MissionItemType;
+import com.o3dr.services.android.lib.drone.property.Parameter;
+import com.o3dr.services.android.lib.drone.property.Parameters;
+import com.o3dr.services.android.lib.model.SimpleCommandListener;
 
 import org.beyene.sius.unit.length.LengthUnit;
 import org.droidplanner.android.R;
 import org.droidplanner.android.activities.interfaces.OnEditorInteraction;
+import org.droidplanner.android.dialogs.SlideToUnlockDialog;
 import org.droidplanner.android.dialogs.SupportEditInputDialog;
+import org.droidplanner.android.dialogs.SupportYesNoWithPrefsDialog;
 import org.droidplanner.android.dialogs.openfile.OpenFileDialog;
 import org.droidplanner.android.dialogs.openfile.OpenMissionDialog;
 import org.droidplanner.android.fragments.EditorListFragment;
@@ -45,7 +56,9 @@ import org.droidplanner.android.utils.analytics.GAUtils;
 import org.droidplanner.android.utils.file.FileStream;
 import org.droidplanner.android.utils.file.IO.MissionReader;
 import org.droidplanner.android.utils.prefs.AutoPanMode;
+import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -57,7 +70,12 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         OnEditorInteraction, MissionSelection.OnSelectionUpdateListener, OnClickListener,
         OnLongClickListener, SupportEditInputDialog.Listener {
 
-    private static final double DEFAULT_SPEED = 5; //meters per second.
+    public static final double DEFAULT_SPEED = 5; //meters per second.
+    public static final double MAX_SPEED = 6; //meters per second.
+    public static final double MIN_SPEED = 0.5; //meters per second.
+
+    private double currentSpeed = DEFAULT_SPEED;
+    private int currentRounds = 0;
 
     /**
      * Used to retrieve the item detail window when the activity is destroyed,
@@ -74,6 +92,13 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         eventFilter.addAction(MissionProxy.ACTION_MISSION_PROXY_UPDATE);
         eventFilter.addAction(AttributeEvent.MISSION_RECEIVED);
         eventFilter.addAction(AttributeEvent.PARAMETERS_REFRESH_COMPLETED);
+    }
+
+    public void setSpeedAndRounds(double speed, int rounds){
+        currentSpeed = speed;
+        currentRounds = rounds;
+        updateMissionLength();
+        speedRoundinfoView.setText(String.format("Runden: %d  Geschwindigkeit: %.2f m/s", currentRounds, currentSpeed));
     }
 
     private final BroadcastReceiver eventReceiver = new BroadcastReceiver() {
@@ -107,11 +132,12 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
      * View widgets.
      */
     private GestureMapFragment gestureMapFragment;
-    private EditorToolsFragment editorToolsFragment;
+    protected EditorToolsFragment editorToolsFragment;
     private MissionDetailFragment itemDetailFragment;
-    private FragmentManager fragmentManager;
+    protected FragmentManager fragmentManager;
 
     private TextView infoView;
+    private TextView speedRoundinfoView;
 
     /**
      * If the mission was loaded from a file, the filename is stored here.
@@ -138,6 +164,8 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
 
         infoView = (TextView) findViewById(R.id.editorInfoWindow);
 
+        speedRoundinfoView = (TextView) findViewById(R.id.editorSpeedRoundInfoWindow);
+
         final FloatingActionButton zoomToFit = (FloatingActionButton) findViewById(R.id.zoom_to_fit_button);
         zoomToFit.setVisibility(View.VISIBLE);
         zoomToFit.setOnClickListener(this);
@@ -163,6 +191,8 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         gestureMapFragment.setOnPathFinishedListener(this);
         openActionDrawer();
     }
+
+
 
     @Override
     protected float getActionDrawerTopMargin() {
@@ -297,9 +327,41 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
                 saveMissionFile();
                 return true;
 
+            case R.id.menu_upload_mission: {
+                final Drone dpApi = dpApp.getDrone();
+                final MissionProxy missionProxy = dpApp.getMissionProxy();
+                List<Parameter> parameters = sendSpeedToAPM();
+                VehicleApi.getApi(editorToolsFragment.getDrone()).writeParameters(new Parameters(parameters));
+                if (missionProxy.getItems().isEmpty() || missionProxy.hasTakeoffAndLandOrRTL()) {
+                    missionProxy.sendMissionToAPM(dpApi);
+                } else {
+                    SupportYesNoWithPrefsDialog dialog = SupportYesNoWithPrefsDialog.newInstance(
+                            getApplicationContext(), MISSION_UPLOAD_CHECK_DIALOG_TAG,
+                            getString(R.string.mission_upload_title),
+                            getString(R.string.mission_upload_message),
+                            getString(android.R.string.ok),
+                            getString(R.string.label_skip),
+                            DroidPlannerPrefs.PREF_AUTO_INSERT_MISSION_TAKEOFF_RTL_LAND, this);
+
+                    if (dialog != null) {
+                        dialog.show(getSupportFragmentManager(), MISSION_UPLOAD_CHECK_DIALOG_TAG);
+                    }
+
+                }
+                return true;
+            }
+
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @NonNull
+    private List<Parameter> sendSpeedToAPM() {
+        Parameter p = new Parameter("WPNAV_SPEED", (int)(currentSpeed * 100), 9);
+        List<Parameter> parameters = new ArrayList<Parameter>();
+        parameters.add(p);
+        return parameters;
     }
 
     private void openMissionFile() {
@@ -369,7 +431,7 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
             LengthUnit convertedMissionLength = unitSystem.getLengthUnitProvider().boxBaseValueToTarget(missionLength);
             double speedParameter = dpApp.getDrone().getSpeedParameter() / 100; //cm/s to m/s conversion.
             if (speedParameter == 0)
-                speedParameter = DEFAULT_SPEED;
+                speedParameter = currentSpeed;
 
             int time = (int) (missionLength / speedParameter);
 
@@ -580,5 +642,7 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         if (planningMapFragment != null)
             planningMapFragment.postUpdate();
     }
+
+
 
 }

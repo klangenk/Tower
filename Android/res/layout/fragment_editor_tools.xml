@@ -46,6 +46,11 @@
             android:button="@drawable/ic_gesture_grey_700_24dp" />
 
         <org.droidplanner.android.view.button.RadioButtonCenter
+            android:id="@+id/editor_tools_object_selection"
+            style="@style/editorButton"
+            android:button="@drawable/ic_home_grey_700_24dp" />
+
+        <org.droidplanner.android.view.button.RadioButtonCenter
             android:id="@+id/editor_tools_selector"
             style="@style/editorButton"
             android:button="@drawable/ic_tab_unselected_grey_700_24dp" />

@@ -48,7 +48,7 @@ import org.droidplanner.android.utils.unit.systems.UnitSystem;
 public abstract class SuperUI extends AppCompatActivity implements DroidPlannerApp.ApiListener,
         SupportYesNoDialog.Listener, ServiceConnection {
 
-    private static final String MISSION_UPLOAD_CHECK_DIALOG_TAG = "Mission Upload check.";
+    protected static final String MISSION_UPLOAD_CHECK_DIALOG_TAG = "Mission Upload check.";
 
     private static final IntentFilter superIntentFilter = new IntentFilter();
 

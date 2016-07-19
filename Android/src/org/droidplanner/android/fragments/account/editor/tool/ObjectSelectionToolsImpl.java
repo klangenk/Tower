@@ -2,10 +2,7 @@ package org.droidplanner.android.fragments.account.editor.tool;
 
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.util.Log;
-import android.view.View;
 import android.widget.AdapterView;
-import android.widget.Toast;
 
 import com.o3dr.android.client.Drone;
 import com.o3dr.services.android.lib.coordinate.LatLong;
@@ -13,22 +10,27 @@ import com.o3dr.services.android.lib.coordinate.LatLongAlt;
 import com.o3dr.services.android.lib.drone.attribute.AttributeType;
 import com.o3dr.services.android.lib.drone.mission.MissionItemType;
 import com.o3dr.services.android.lib.drone.mission.item.MissionItem;
+import com.o3dr.services.android.lib.drone.mission.item.command.CameraTrigger;
 import com.o3dr.services.android.lib.drone.mission.item.command.ReturnToLaunch;
 import com.o3dr.services.android.lib.drone.mission.item.command.Takeoff;
-import com.o3dr.services.android.lib.drone.mission.item.complex.Survey;
-import com.o3dr.services.android.lib.drone.mission.item.complex.SurveyDetail;
 import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.util.MathUtils;
 
-import org.droidplanner.android.R;
-import org.droidplanner.android.dialogs.HeightDialog;
-import org.droidplanner.android.fragments.helpers.GestureMapFragment;
+import org.droidplanner.android.activities.EditorActivity;
+import org.droidplanner.android.dialogs.OkDialog;
+import org.droidplanner.android.dialogs.ScanSettingsDialog;
 
 import java.util.ArrayList;
 import java.util.List;
 
 
 class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnItemSelectedListener {
+
+    private static double cameraAngleVertical = 97;
+    private static double secondsPerPicture = 4;
+    private double currentSpeed = EditorActivity.DEFAULT_SPEED;
+    private double currentDistance = 0;
+    private int currentRounds = 0;
 
     ObjectSelectionToolsImpl(EditorToolsFragment fragment) {
         super(fragment);
@@ -65,18 +67,72 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
         if (missionProxy != null) {
             if (points.size() == 4) {
 
-                HeightDialog dlg = new HeightDialog();
-                dlg.setListener(new HeightDialog.Listener() {
+                ScanSettingsDialog dlg = new ScanSettingsDialog();
+                dlg.setListener(new ScanSettingsDialog.Listener() {
                     @Override
-                    public void onHeightSet(double heightObject, double heightFlight) {
-                        final MissionItem item = calculateRegionOfInterest(points, heightObject / 2);
-                        List<LatLongAlt> waypoints = calculateWaypointsForObject(points,heightFlight, heightObject, 90);
+                    public void onSettingsSet(final ScanSettingsDialog.Settings settings) {
 
-                        missionProxy.addMissionItem(item);
-                        missionProxy.addWaypointsWithAltitude(waypoints);
-                        missionProxy.addWaypoint(waypoints.get(0));
+                        final MissionItem item = calculateRegionOfInterest(points, settings.heightObject / 2);
+                        final List<LatLongAlt> waypoints = calculateWaypointsForObject(points, settings.heightFlight, settings.heightObject, 97);
 
-                        addTakeOffAndRTL(heightFlight);
+                        if(settings.shouldTakePictures){
+
+                            final double roundDistance = 2 * MathUtils.getDistance2D(waypoints.get(0), waypoints.get(1)) + 2 *MathUtils.getDistance2D(waypoints.get(1), waypoints.get(2));
+                            currentDistance =  settings.roundCount * roundDistance;
+                            currentSpeed = calcSpeed(currentDistance,settings.secondsPerPicture, settings.pictureCount);
+
+
+                            if(currentSpeed < EditorActivity.MIN_SPEED) {
+                                OkDialog.newInstance(editorToolsFragment.getActivity(), "Geringe Geschwindigkeit", String.format("Die berechnete Fluggeschwindigkeit um alle Bilder aufzunehmen liegt mit %.2f m/s unter der vorgeschlagenen Mindestgewschindigkeit von %.2f m/s. Diese wird durch die Erhöhung der Rundenzahl ausgeglichen", currentSpeed, EditorActivity.MIN_SPEED), new OkDialog.Listener() {
+                                    @Override
+                                    public void onOk() {
+                                        while(currentSpeed < EditorActivity.MIN_SPEED){
+                                            settings.roundCount++;
+                                            currentDistance =  settings.roundCount * roundDistance;
+                                            currentSpeed = calcSpeed(currentDistance,settings.secondsPerPicture, settings.pictureCount);
+
+                                        }
+                                        CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
+                                        double triggerDistance = currentDistance / settings.pictureCount;
+                                        cameraItem.setTriggerDistance(triggerDistance);
+                                        missionProxy.addMissionItem(cameraItem);
+                                        updateSpeedAndRounds();
+                                        setWaypoints(settings, item, waypoints);
+                                    }
+
+                                    @Override
+                                    public void onCancel() {
+
+                                    }
+
+                                    @Override
+                                    public void onDismiss() {
+
+                                    }
+                                }).show(editorToolsFragment.getFragmentManager(), "MIN_SPEED");
+                            }else{
+                                CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
+                                double triggerDistance = currentDistance / settings.pictureCount;
+                                cameraItem.setTriggerDistance(triggerDistance);
+                                missionProxy.addMissionItem(cameraItem);
+                                updateSpeedAndRounds();
+                                setWaypoints(settings, item, waypoints);
+                            }
+
+
+
+
+
+
+
+
+                        }else{
+                            updateSpeedAndRounds();
+                            setWaypoints(settings, item, waypoints);
+                        }
+
+
+
                     }
                 });
 
@@ -91,19 +147,39 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
         editorToolsFragment.setTool(EditorToolsFragment.EditorTools.NONE);
     }
 
-    private void askHeight(String text, HeightCallback cb){
+    private void setWaypoints(ScanSettingsDialog.Settings settings, MissionItem item, List<LatLongAlt> waypoints) {
+        //Add additional rounds
+        int waypointCount = waypoints.size();
+        double riseAltitude = 0;
+        for(int round = 1; round < settings.roundCount; round++){
+            riseAltitude += settings.risePerRound;
+            for(int i = 0; i < waypointCount; i++) {
+                LatLongAlt wp = new LatLongAlt(waypoints.get(i));
+                wp.setAltitude(wp.getAltitude() + riseAltitude);
+                waypoints.add(wp);
+            }
+        }
 
+
+        missionProxy.addMissionItem(item);
+        missionProxy.addWaypointsWithAltitude(waypoints);
+        missionProxy.addWaypoint(waypoints.get(0));
+
+        addTakeOffAndRTL(settings.heightFlight);
     }
 
-    private interface HeightCallback{
-        void onHeight(double height);
+    private double calcSpeed(double flightdistance, double secondsPerPicturem, int pictureCount){
+        return Math.min(EditorActivity.MAX_SPEED, flightdistance / (secondsPerPicture * pictureCount));
     }
 
-    private static double calcDistanceForObjectToFitInFrame(double width, double height, double angle){
-        double distanceWidth = 1.1 * width * Math.pow(Math.sin(Math.toRadians((180 - angle)/2)),2) / Math.sin(Math.toRadians(angle));
-        double distanceHeight = 1.1 * height * Math.pow(Math.sin(Math.toRadians((180 - angle)/2)),2) / Math.sin(Math.toRadians(angle));
-        double minDistance = 10;
-        return Math.max(Math.max(distanceHeight, distanceWidth), minDistance);
+    private static double calcDistanceForObjectToFitInFrame(double height, double angleVertical){
+        double errorFactor = 1.1;
+        double minDistance = 5;
+        //double distanceWidth = 1.1 * width * Math.pow(Math.sin(Math.toRadians((180 - angleHorizontal)/2)),2) / Math.sin(Math.toRadians(angleHorizontal));
+        //double diagonal = Math.sqrt(length*length + height*height);
+        double distance = height / (2*Math.tan(Math.toRadians(angleVertical/2)));
+
+        return Math.max(errorFactor * distance, minDistance);
     }
 
     @NonNull
@@ -119,24 +195,28 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
     }
 
     @NonNull
-    private List<LatLongAlt> calculateWaypointsForObject(List<LatLong> points, double flightHeight, double objectHeight, double cameraAngle) {
+    private List<LatLongAlt> calculateWaypointsForObject(List<LatLong> points, double flightHeight, double objectHeight, double cameraAngleVertical) {
         int i = 0;
         List<LatLongAlt> waypoints = new ArrayList<LatLongAlt>();
-        double width = MathUtils.getDistance2D(points.get(0), points.get(1));
-        double length = MathUtils.getDistance2D(points.get(1), points.get(2));
-        double distances[] = new double[]{
-                calcDistanceForObjectToFitInFrame(width, objectHeight, cameraAngle),
-                calcDistanceForObjectToFitInFrame(length, objectHeight, cameraAngle)
-        };
+
+
+        double distance = calcDistanceForObjectToFitInFrame(objectHeight, cameraAngleVertical);
+        //double distances[] = new double[]{
+        //        calcDistanceForObjectToFitInFrame(width, objectHeight, cameraAngle),
+        //        calcDistanceForObjectToFitInFrame(length, objectHeight, cameraAngle)
+       // };
         for(LatLong p : points){
             double heading = MathUtils.getHeadingFromCoordinates(points.get(i), points.get((i + 1) % 4));
 
 
-            LatLongAlt wp = new LatLongAlt(MathUtils.newCoordFromBearingAndDistance(p, (heading+90)%360, distances[i%2]),flightHeight);
-            wp.set(MathUtils.newCoordFromBearingAndDistance(wp, (heading+180)%360, distances[(i+1)%2]));
+            LatLongAlt wp = new LatLongAlt(MathUtils.newCoordFromBearingAndDistance(p, (heading+90)%360, distance),flightHeight);
+            wp.set(MathUtils.newCoordFromBearingAndDistance(wp, (heading+180)%360, distance));
             i++;
             waypoints.add(wp);
         }
+
+
+
         return waypoints;
     }
 
@@ -146,6 +226,10 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
             points.add(points.get(0));
             points.remove(0);
         }
+    }
+
+    private void updateSpeedAndRounds(){
+        ((EditorActivity) editorToolsFragment.getActivity()).setSpeedAndRounds( currentSpeed, currentRounds);
     }
 
     private int findClosestWaypoint(LatLong takeoff, List<LatLong> points){

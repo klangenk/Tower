@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_height="match_parent"
+    android:layout_width="match_parent">
+    <RelativeLayout
+        style="@style/missionItemDetailLayout"
+        >
+        <ImageView
+            android:id="@+id/menuHint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:src="@drawable/ic_menu_hint"
+            android:layout_margin="10dp"
+            tools:ignore="ContentDescription"
+            />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/ModeDetailText"
+                android:background="@drawable/mode_desc_rectangle"
+                android:text="@string/waypointInfo_ROI" />
+
+            <org.droidplanner.android.view.spinnerWheel.CardWheelHorizontalView
+                android:id="@+id/altitudeObjectPicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Höhe des Objekts"
+                style="@style/missionItemDetailCard"/>
+
+            <org.droidplanner.android.view.spinnerWheel.CardWheelHorizontalView
+                android:id="@+id/altitudeFlightPicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Flughöhe"
+                style="@style/missionItemDetailCard"/>
+
+            <org.droidplanner.android.view.spinnerWheel.CardWheelHorizontalView
+                android:id="@+id/roundCountPicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Anzahl der Runden"
+                style="@style/missionItemDetailCard"/>
+
+            <org.droidplanner.android.view.spinnerWheel.CardWheelHorizontalView
+                android:id="@+id/risePerRound"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Anstieg pro Runde"
+                style="@style/missionItemDetailCard"/>
+
+            <CheckBox
+                android:id="@+id/cameraTriggerCheckbox"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="Bilder automatisch aufnehmen"
+                android:checked="true"/>
+
+            <org.droidplanner.android.view.spinnerWheel.CardWheelHorizontalView
+                android:id="@+id/cameraPictureCountPicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Anzahl der Bilder"
+                style="@style/missionItemDetailCard"/>
+
+            <org.droidplanner.android.view.spinnerWheel.CardWheelHorizontalView
+                android:id="@+id/cameraTriggerSpeedPicker"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sekunden pro Bild"
+                style="@style/missionItemDetailCard"/>
+
+
+        </LinearLayout>
+
+    </RelativeLayout>
+</ScrollView>

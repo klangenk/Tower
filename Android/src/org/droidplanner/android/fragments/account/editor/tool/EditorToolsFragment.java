@@ -41,7 +41,7 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
     private static final String STATE_SELECTED_TOOL = "selected_tool";
 
     public enum EditorTools {
-        MARKER, DRAW, TRASH, SELECTOR, NONE
+        MARKER, DRAW, OBJECT_SELECT, TRASH, SELECTOR, NONE
     }
 
     public interface EditorToolListener {
@@ -83,7 +83,8 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
 
     {
         editorToolsImpls[EditorTools.MARKER.ordinal()] = new MarkerToolsImpl(this);
-        editorToolsImpls[EditorTools.DRAW.ordinal()] = new ObjectSelectionToolsImpl(this);
+        editorToolsImpls[EditorTools.DRAW.ordinal()] = new DrawToolsImpl(this);
+        editorToolsImpls[EditorTools.OBJECT_SELECT.ordinal()] = new ObjectSelectionToolsImpl(this);
         editorToolsImpls[EditorTools.TRASH.ordinal()] = new TrashToolsImpl(this);
         editorToolsImpls[EditorTools.SELECTOR.ordinal()] = new SelectorToolsImpl(this);
         editorToolsImpls[EditorTools.NONE.ordinal()] = new NoneToolsImpl(this);
@@ -162,7 +163,9 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
         selectAll = (TextView) view.findViewById(R.id.select_all_button);
         selectAll.setOnClickListener(selectorToolImpl);
 
-        for (View vv : new View[]{buttonDraw, buttonMarker, buttonTrash, buttonSelector}) {
+        final RadioButtonCenter buttonObjectSelect = (RadioButtonCenter) view.findViewById(R.id.editor_tools_object_selection);
+
+        for (View vv : new View[]{buttonDraw, buttonMarker, buttonObjectSelect, buttonTrash, buttonSelector}) {
             vv.setOnClickListener(this);
         }
     }
@@ -327,6 +330,7 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
                 clearSubOptions.setVisibility(View.VISIBLE);
                 break;
 
+
             case DRAW:
                 editorSubTools.setVisibility(View.VISIBLE);
                 drawItemsSpinner.setVisibility(View.VISIBLE);
@@ -367,6 +371,9 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
             case R.id.editor_tools_draw:
                 return EditorTools.DRAW;
 
+            case R.id.editor_tools_object_selection:
+                return EditorTools.OBJECT_SELECT;
+
             case R.id.editor_tools_trash:
                 return EditorTools.TRASH;
 
@@ -391,6 +398,9 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
 
             case DRAW:
                 return R.id.editor_tools_draw;
+
+            case OBJECT_SELECT:
+                return R.id.editor_tools_object_selection;
 
             case TRASH:
                 return R.id.editor_tools_trash;

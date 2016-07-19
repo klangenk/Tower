@@ -44,6 +44,21 @@
             android:layout_alignEnd="@+id/actionbar_container"
             />
 
+        <TextView
+            android:id="@+id/editorSpeedRoundInfoWindow"
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            tools:text="@string/editor_info_window"
+            style="@style/editorMissionOverviewText"
+            android:visibility="visible"
+            android:gravity="end"
+            android:layout_below="@+id/editorInfoWindow"
+            android:layout_alignLeft="@+id/actionbar_container"
+            android:layout_alignStart="@+id/actionbar_container"
+            android:layout_alignRight="@+id/actionbar_container"
+            android:layout_alignEnd="@+id/actionbar_container"
+            />
+
         <include
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
