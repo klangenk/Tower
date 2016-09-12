@@ -12,7 +12,8 @@ import android.util.AttributeSet;
 import org.droidplanner.android.fragments.helpers.GestureMapFragment;
 
 /**
- * Created by Kevin on 17.05.2016.
+ * Created by Kevin Langenkämper
+ * This class was created in order to allow drawing a rect on the map
  */
 public class CustomGestureOverlayView extends GestureOverlayView {
 
@@ -28,22 +29,6 @@ public class CustomGestureOverlayView extends GestureOverlayView {
 
     public CustomGestureOverlayView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-    }
-
-
-    public enum GestureMode{
-        FREE,
-        RECTANGLE
-    }
-
-    private GestureMode currentMode = GestureMode.FREE;
-
-    public void setMode(GestureMode mode){
-        currentMode = mode;
-    }
-
-    public GestureMode getMode(){
-        return currentMode;
     }
 
     public void drawRect(PointF point1, PointF point2) {

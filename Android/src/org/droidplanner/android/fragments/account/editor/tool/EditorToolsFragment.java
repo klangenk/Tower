@@ -53,7 +53,7 @@ public class EditorToolsFragment extends ApiListenerFragment implements OnClickL
 
         void zoomToFitSelected();
 
-        void setGestureMode(CustomGestureOverlayView.GestureMode mode);
+        void setGestureMode(GestureMapFragment.GestureMode mode);
     }
 
     private static final IntentFilter eventFilter = new IntentFilter();
