@@ -70,8 +70,8 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         OnEditorInteraction, MissionSelection.OnSelectionUpdateListener, OnClickListener,
         OnLongClickListener, SupportEditInputDialog.Listener {
 
-    public static final double DEFAULT_SPEED = 5; //meters per second.
-    public static final double MAX_SPEED = 6; //meters per second.
+    public static final double DEFAULT_SPEED = 2; //meters per second.
+    public static final double MAX_SPEED = 5; //meters per second.
     public static final double MIN_SPEED = 0.5; //meters per second.
 
     private double currentSpeed = DEFAULT_SPEED;

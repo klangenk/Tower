@@ -27,7 +27,6 @@ import java.util.List;
 class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnItemSelectedListener {
 
     private static double cameraAngleVertical = 97;
-    private static double secondsPerPicture = 4;
     private double currentSpeed = EditorActivity.DEFAULT_SPEED;
     private double currentDistance = 0;
     private int currentRounds = 0;
@@ -168,7 +167,7 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
         addTakeOffAndRTL(settings.heightFlight);
     }
 
-    private double calcSpeed(double flightdistance, double secondsPerPicturem, int pictureCount){
+    private double calcSpeed(double flightdistance, double secondsPerPicture, int pictureCount){
         return Math.min(EditorActivity.MAX_SPEED, flightdistance / (secondsPerPicture * pictureCount));
     }
 
