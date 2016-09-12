@@ -91,11 +91,15 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 	public void onGestureEnded(GestureOverlayView arg0, MotionEvent arg1) {
 		overlay.setEnabled(false);
 		List<LatLong> path = decodeGesture();
-		if(overlay.getMode() == CustomGestureOverlayView.GestureMode.FREE) {
+		if(currentMode == GestureMode.FREE) {
 			if (path.size() > 1) {
 				path = MathUtils.simplify(path, toleranceInPixels);
 			}
-		}else if(overlay.getMode() == CustomGestureOverlayView.GestureMode.RECTANGLE){
+
+			//if mode is rectangle
+			//get the first and last point of the path
+			//and calculate the other two points of the rectangle
+		}else if(currentMode == GestureMode.RECTANGLE){
 			List<LatLong> rectPath = new ArrayList<LatLong>();
 			LatLong point1 = path.get(0);
 			LatLong point2 = path.get(path.size() - 1);
@@ -125,8 +129,20 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 		overlay.removeRect();
 	}
 
-	public void setMode(CustomGestureOverlayView.GestureMode mode){
-		overlay.setMode(mode);
+
+	public enum GestureMode{
+		FREE,
+		RECTANGLE
+	}
+
+	private GestureMode currentMode = GestureMode.FREE;
+
+	public GestureMode getMode(){
+		return currentMode;
+	}
+
+	public void setGestureMode(GestureMode mode){
+		this.currentMode = mode;
 	}
 
 	private List<LatLong> decodeGesture() {
@@ -144,8 +160,11 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 
 	@Override
 	public void onGesture(GestureOverlayView arg0, MotionEvent arg1) {
-		if(overlay.getMode() == CustomGestureOverlayView.GestureMode.RECTANGLE){
-			Log.v("Pos", String.format("%.4f %.4f", arg1.getX(), arg1.getY()));
+		Log.v("Pos", String.format("%.4f %.4f", arg1.getX(), arg1.getY()));
+
+
+		if(currentMode == GestureMode.RECTANGLE){
+            //draw rectangle
 			gestureEnd.set(arg1.getX(), arg1.getY());
 			overlay.drawRect(gestureStart, gestureEnd);
 		}
