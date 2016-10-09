@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -37,6 +38,7 @@ import org.droidplanner.android.dialogs.SupportYesNoWithPrefsDialog;
 import org.droidplanner.android.fragments.SettingsFragment;
 import org.droidplanner.android.fragments.actionbar.VehicleStatusFragment;
 import org.droidplanner.android.proxy.mission.MissionProxy;
+import org.droidplanner.android.utils.Raspberry;
 import org.droidplanner.android.utils.Utils;
 import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
 import org.droidplanner.android.utils.unit.UnitManager;
@@ -407,9 +409,23 @@ public abstract class SuperUI extends AppCompatActivity implements DroidPlannerA
 
     public void toggleDroneConnection() {
         final Drone drone = dpApp.getDrone();
-        if (drone != null && drone.isConnected())
+        if (drone != null && drone.isConnected()) {
             dpApp.disconnectFromDrone();
-        else
-            dpApp.connectToDrone();
+            Raspberry.disconect();
+        }
+        else {
+            Raspberry.SetOnConnectListener(new Raspberry.OnConnectListener() {
+                @Override
+                public void onConnect() {
+                    SharedPreferences sharedPref = DroidPlannerPrefs.getInstance(SuperUI.this).prefs;
+                    Raspberry.setCaptureType(Raspberry.CaptureType.values()[sharedPref.getInt("capture_type", 0)]);
+                    dpApp.connectToDrone();
+                }
+            });
+            Raspberry.connect("192.168.43.1", 9005);
+
+            //dpApp.connectToDrone();
+
+        }
     }
 }

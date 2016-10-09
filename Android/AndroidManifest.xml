@@ -84,7 +84,7 @@
 
         </activity>
         <activity
-            android:name=".activities.EditorActivity"
+            android:name=".activities.CustomEditorActivity"
             android:label="@string/editor"
             android:launchMode="singleTop"
             android:theme="@style/CustomActionBarTheme.Transparent"

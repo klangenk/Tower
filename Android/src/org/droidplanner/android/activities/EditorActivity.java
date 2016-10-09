@@ -66,11 +66,6 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         OnLongClickListener, SupportEditInputDialog.Listener {
 
     public static final double DEFAULT_SPEED = 2; //meters per second.
-    public static final double MAX_SPEED = 5; //meters per second.
-    public static final double MIN_SPEED = 0.5; //meters per second.
-
-    private double currentSpeed = DEFAULT_SPEED;
-    private int currentRounds = 0;
 
     /**
      * Used to retrieve the item detail window when the activity is destroyed,
@@ -89,12 +84,7 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         eventFilter.addAction(AttributeEvent.PARAMETERS_REFRESH_COMPLETED);
     }
 
-    public void setSpeedAndRounds(double speed, int rounds){
-        currentSpeed = speed;
-        currentRounds = rounds;
-        updateMissionLength();
-        speedRoundinfoView.setText(String.format("Runden: %d  Geschwindigkeit: %.2f m/s", currentRounds, currentSpeed));
-    }
+
 
     private final BroadcastReceiver eventReceiver = new BroadcastReceiver() {
         @Override
@@ -121,18 +111,18 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
      * {@link org.droidplanner.android.proxy.mission.MissionProxy} object on the Android
      * layer.
      */
-    private MissionProxy missionProxy;
+    protected MissionProxy missionProxy;
 
     /*
      * View widgets.
      */
     private GestureMapFragment gestureMapFragment;
     protected EditorToolsFragment editorToolsFragment;
-    private MissionDetailFragment itemDetailFragment;
+    protected MissionDetailFragment itemDetailFragment;
     protected FragmentManager fragmentManager;
 
-    private TextView infoView;
-    private TextView speedRoundinfoView;
+    protected TextView infoView;
+
 
     /**
      * If the mission was loaded from a file, the filename is stored here.
@@ -159,7 +149,7 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
 
         infoView = (TextView) findViewById(R.id.editorInfoWindow);
 
-        speedRoundinfoView = (TextView) findViewById(R.id.editorSpeedRoundInfoWindow);
+
 
         final FloatingActionButton zoomToFit = (FloatingActionButton) findViewById(R.id.zoom_to_fit_button);
         zoomToFit.setVisibility(View.VISIBLE);
@@ -322,42 +312,12 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
                 saveMissionFile();
                 return true;
 
-            case R.id.menu_upload_mission: {
-                final Drone dpApi = dpApp.getDrone();
-                final MissionProxy missionProxy = dpApp.getMissionProxy();
-                List<Parameter> parameters = sendSpeedToAPM();
-                VehicleApi.getApi(editorToolsFragment.getDrone()).writeParameters(new Parameters(parameters));
-                if (missionProxy.getItems().isEmpty() || missionProxy.hasTakeoffAndLandOrRTL()) {
-                    missionProxy.sendMissionToAPM(dpApi);
-                } else {
-                    SupportYesNoWithPrefsDialog dialog = SupportYesNoWithPrefsDialog.newInstance(
-                            getApplicationContext(), MISSION_UPLOAD_CHECK_DIALOG_TAG,
-                            getString(R.string.mission_upload_title),
-                            getString(R.string.mission_upload_message),
-                            getString(android.R.string.ok),
-                            getString(R.string.label_skip),
-                            DroidPlannerPrefs.PREF_AUTO_INSERT_MISSION_TAKEOFF_RTL_LAND, this);
-
-                    if (dialog != null) {
-                        dialog.show(getSupportFragmentManager(), MISSION_UPLOAD_CHECK_DIALOG_TAG);
-                    }
-
-                }
-                return true;
-            }
-
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
-    @NonNull
-    private List<Parameter> sendSpeedToAPM() {
-        Parameter p = new Parameter("WPNAV_SPEED", (int)(currentSpeed * 100), 9);
-        List<Parameter> parameters = new ArrayList<Parameter>();
-        parameters.add(p);
-        return parameters;
-    }
+
 
     private void openMissionFile() {
         OpenFileDialog missionDialog = new OpenMissionDialog() {
@@ -426,7 +386,7 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
             LengthUnit convertedMissionLength = unitSystem.getLengthUnitProvider().boxBaseValueToTarget(missionLength);
             double speedParameter = dpApp.getDrone().getSpeedParameter() / 100; //cm/s to m/s conversion.
             if (speedParameter == 0)
-                speedParameter = currentSpeed;
+                speedParameter = DEFAULT_SPEED;
 
             int time = (int) (missionLength / speedParameter);
 
@@ -530,7 +490,7 @@ public class EditorActivity extends DrawerNavigationUI implements OnPathFinished
         addItemDetail(itemDetail);
     }
 
-    private void removeItemDetail() {
+    protected void removeItemDetail() {
         if (itemDetailFragment != null) {
             fragmentManager.beginTransaction().remove(itemDetailFragment).commit();
             itemDetailFragment = null;

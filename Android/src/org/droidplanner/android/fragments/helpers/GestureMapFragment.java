@@ -9,10 +9,7 @@ import org.droidplanner.android.fragments.account.editor.tool.CustomGestureOverl
 
 import android.gesture.GestureOverlayView;
 import android.gesture.GestureOverlayView.OnGestureListener;
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.PointF;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -121,9 +118,6 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 			path = rectPath;
 		}
 
-		//Canvas canvas = new Canvas();
-
-		//overlay.draw(canvas);
 
 		listener.onPathFinished(path);
 		overlay.removeRect();
@@ -166,7 +160,7 @@ public class GestureMapFragment extends Fragment implements OnGestureListener {
 		if(currentMode == GestureMode.RECTANGLE){
             //draw rectangle
 			gestureEnd.set(arg1.getX(), arg1.getY());
-			overlay.drawRect(gestureStart, gestureEnd);
+			overlay.setRect(gestureStart, gestureEnd);
 		}
 	}
 

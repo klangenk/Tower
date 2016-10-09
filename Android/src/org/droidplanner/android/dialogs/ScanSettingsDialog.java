@@ -14,6 +14,7 @@ import android.widget.CompoundButton;
 import org.beyene.sius.unit.length.LengthUnit;
 import org.droidplanner.android.R;
 import org.droidplanner.android.utils.Utils;
+import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
 import org.droidplanner.android.utils.unit.UnitManager;
 import org.droidplanner.android.utils.unit.providers.length.LengthUnitProvider;
 import org.droidplanner.android.utils.unit.systems.UnitSystem;
@@ -22,7 +23,9 @@ import org.droidplanner.android.view.spinnerWheel.adapters.LengthWheelAdapter;
 import org.droidplanner.android.view.spinnerWheel.adapters.NumericWheelAdapter;
 
 /**
- * Created by Kevin on 19.05.2016.
+ * Created by Kevin Langenkämper
+ *
+ * This class represents the Settings-Dialog for Object-Scanning
  */
 public class ScanSettingsDialog extends DialogFragment {
 
@@ -33,16 +36,16 @@ public class ScanSettingsDialog extends DialogFragment {
         public double heightFlight;
         public double secondsPerPicture;
         public int pictureCount;
-        public boolean shouldTakePictures;
+        public boolean shouldTriggerCamera;
         public int roundCount;
         public double risePerRound;
 
-        public Settings(double heightObject, double heightFlight, double secondsPerPicture, int pictureCount, boolean shouldTakePictures, int roundCount, double risePerRound) {
+        public Settings(double heightObject, double heightFlight, double secondsPerPicture, int pictureCount, boolean shouldTriggerCamera, int roundCount, double risePerRound) {
             this.heightObject = heightObject;
             this.heightFlight = heightFlight;
             this.secondsPerPicture = secondsPerPicture;
             this.pictureCount = pictureCount;
-            this.shouldTakePictures = shouldTakePictures;
+            this.shouldTriggerCamera = shouldTriggerCamera;
             this.roundCount = roundCount;
             this.risePerRound = risePerRound;
         }
@@ -57,7 +60,7 @@ public class ScanSettingsDialog extends DialogFragment {
     private LengthUnit heightFlight;
     private int secondsPerPicture;
     private int pictureCount;
-    private boolean shouldTakePictures;
+    private boolean shouldTriggerCamera;
     private int roundCount;
     private LengthUnit risePerRound;
 
@@ -93,13 +96,15 @@ public class ScanSettingsDialog extends DialogFragment {
 
         LayoutInflater inflater = getActivity().getLayoutInflater();
         AlertDialog.Builder b = new AlertDialog.Builder(getActivity())
-                .setTitle("Höhe einstellen")
+                .setTitle("Einstellungen")
                 .setView(generateContentView(savedInstanceState))
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
+                        DroidPlannerPrefs.getInstance(getContext()).setImageCount(pictureCount);
+                        DroidPlannerPrefs.getInstance(getContext()).setImageTime(secondsPerPicture);
                         if (mListener != null) {
-                            mListener.onSettingsSet(new Settings(heightObject.getValue(), heightFlight.getValue(), secondsPerPicture, pictureCount, shouldTakePictures, roundCount, risePerRound.getValue()));
+                            mListener.onSettingsSet(new Settings(heightObject.getValue(), heightFlight.getValue(), secondsPerPicture, pictureCount, shouldTriggerCamera, roundCount, risePerRound.getValue()));
                         }
                     }
                 })
@@ -154,9 +159,11 @@ public class ScanSettingsDialog extends DialogFragment {
 
         heightObject = altitudeObjectPicker.getCurrentValue();
         heightFlight = altitudeObjectPicker.getCurrentValue();
-        pictureCount = cameraPictureCountPicker.getCurrentValue();
-        secondsPerPicture = cameraTriggerSpeedPicker.getCurrentValue();
-        shouldTakePictures = cameraTriggerCheckbox.isChecked();
+        pictureCount = DroidPlannerPrefs.getInstance(getContext()).getImageCount();
+        cameraPictureCountPicker.setCurrentValue(pictureCount);
+        secondsPerPicture = DroidPlannerPrefs.getInstance(getContext()).getImageTime();
+        cameraPictureCountPicker.setCurrentValue(secondsPerPicture);
+        shouldTriggerCamera = cameraTriggerCheckbox.isChecked();
         roundCount = roundCountPicker.getCurrentValue();
         risePerRound = risePerRoundPicker.getCurrentValue();
 
@@ -164,7 +171,7 @@ public class ScanSettingsDialog extends DialogFragment {
         CompoundButton.OnCheckedChangeListener checkboxlistener = new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean checked) {
-                shouldTakePictures = checked;
+                shouldTriggerCamera = checked;
                 cameraTriggerSpeedPicker.setVisibility(checked ? View.VISIBLE : View.GONE);
                 cameraPictureCountPicker.setVisibility(checked ? View.VISIBLE : View.GONE);
             }
@@ -213,12 +220,8 @@ public class ScanSettingsDialog extends DialogFragment {
                     heightFlight = endValue;
                 }else if(cardWheel.getId() == R.id.altitudeObjectPicker){
                     heightObject = endValue;
-
-                    //altitudeFlightPicker.setViewAdapter(new LengthWheelAdapter(getActivity(), R.layout.wheel_text_centered,
-                    //        heightObject, lengthUnitProvider.boxBaseValueToTarget(Utils.MAX_DISTANCE)));
                     if(heightFlight.getValue() < heightObject.getValue() + MIN_HEIGHT_DISTANCE_TO_OBJECT){
                         heightFlight = lengthUnitProvider.boxBaseValue(heightObject.getValue() + MIN_HEIGHT_DISTANCE_TO_OBJECT);
-
                     }
                     altitudeFlightPicker.setCurrentValue(heightFlight);
                 }else{

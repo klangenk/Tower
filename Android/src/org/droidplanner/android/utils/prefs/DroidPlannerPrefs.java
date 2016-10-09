@@ -12,6 +12,7 @@ import com.o3dr.services.android.lib.drone.connection.ConnectionType;
 import org.droidplanner.android.fragments.widget.TowerWidgets;
 import org.droidplanner.android.fragments.widget.video.WidgetVideoPreferences;
 import org.droidplanner.android.maps.providers.DPMapProvider;
+import org.droidplanner.android.utils.Raspberry;
 import org.droidplanner.android.utils.Utils;
 import org.droidplanner.android.utils.unit.systems.UnitSystem;
 
@@ -161,9 +162,18 @@ public class DroidPlannerPrefs {
 
     private static final String PREF_WIDGET_VIDEO_TYPE = "pref_widget_video_type";
     private static final String PREF_CUSTOM_VIDEO_UDP_PORT = "pref_custom_video_udp_port";
+    private static final int DEFAULT_VIDEO_UDP_PORT = 9000;
 
     public static final String PREF_UVC_VIDEO_ASPECT_RATIO = "pref_uvc_video_aspect_ratio";
     private static final float DEFAULT_UVC_VIDEO_ASPECT_RATIO = 3f / 4f;
+
+    public static final String PREF_CAMER_ANGLE = "pref_camera_angle";
+    public static final String PREF_CAPTURE_TYPE = "pref_capture_type";
+    public static final String PREF_IMAGE_COUNT = "pref_image_count";
+    public static final String PREF_IMAGE_TIME= "pref_image_time";
+    private static final int DEFAULT_IMAGE_COUNT = 50;
+    private static final int DEFAULT_IMAGE_TIME = 2;
+    private static final int DEFAULT_CAM_ANGLE = 90;
 
     // Public for legacy usage
     public final SharedPreferences prefs;
@@ -527,7 +537,7 @@ public class DroidPlannerPrefs {
 
     @WidgetVideoPreferences.VideoType
     public int getVideoWidgetType(){
-        @WidgetVideoPreferences.VideoType final int videoType = prefs.getInt(PREF_WIDGET_VIDEO_TYPE, WidgetVideoPreferences.SOLO_VIDEO_TYPE);
+        @WidgetVideoPreferences.VideoType final int videoType = prefs.getInt(PREF_WIDGET_VIDEO_TYPE, WidgetVideoPreferences.CUSTOM_VIDEO_TYPE);
         return videoType;
     }
 
@@ -536,7 +546,7 @@ public class DroidPlannerPrefs {
     }
 
     public int getCustomVideoUdpPort(){
-        return prefs.getInt(PREF_CUSTOM_VIDEO_UDP_PORT, -1);
+        return prefs.getInt(PREF_CUSTOM_VIDEO_UDP_PORT, DEFAULT_VIDEO_UDP_PORT);
     }
 
     public void setUVCVideoAspectRatio(Float aspectRatio){
@@ -545,5 +555,37 @@ public class DroidPlannerPrefs {
 
     public Float getUVCVideoAspectRatio(){
         return prefs.getFloat(PREF_UVC_VIDEO_ASPECT_RATIO, DEFAULT_UVC_VIDEO_ASPECT_RATIO);
+    }
+
+    public void setCaptureType(int type){
+        prefs.edit().putInt(PREF_CAPTURE_TYPE, type).apply();
+    }
+
+    public int getCaptureType(){
+        return prefs.getInt(PREF_CAPTURE_TYPE, 0);
+    }
+
+    public void setCameraAngle(float angle){
+        prefs.edit().putFloat(PREF_CAMER_ANGLE, angle).apply();
+    }
+
+    public float getCameraAngle(){
+        return prefs.getFloat(PREF_CAMER_ANGLE, DEFAULT_CAM_ANGLE);
+    }
+
+    public void setImageCount(int count){
+        prefs.edit().putInt(PREF_IMAGE_COUNT, count).apply();
+    }
+
+    public int getImageCount(){
+        return prefs.getInt(PREF_IMAGE_COUNT, DEFAULT_IMAGE_COUNT);
+    }
+
+    public void setImageTime(int time){
+        prefs.edit().putInt(PREF_IMAGE_TIME, time).apply();
+    }
+
+    public int getImageTime(){
+        return prefs.getInt(PREF_IMAGE_TIME, DEFAULT_IMAGE_TIME);
     }
 }

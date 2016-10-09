@@ -12,14 +12,19 @@ import com.o3dr.services.android.lib.drone.mission.MissionItemType;
 import com.o3dr.services.android.lib.drone.mission.item.MissionItem;
 import com.o3dr.services.android.lib.drone.mission.item.command.CameraTrigger;
 import com.o3dr.services.android.lib.drone.mission.item.command.ReturnToLaunch;
+import com.o3dr.services.android.lib.drone.mission.item.command.SetRelay;
 import com.o3dr.services.android.lib.drone.mission.item.command.Takeoff;
 import com.o3dr.services.android.lib.drone.property.Gps;
 import com.o3dr.services.android.lib.util.MathUtils;
 
+import org.droidplanner.android.activities.CustomEditorActivity;
 import org.droidplanner.android.activities.EditorActivity;
 import org.droidplanner.android.dialogs.OkDialog;
 import org.droidplanner.android.dialogs.ScanSettingsDialog;
 import org.droidplanner.android.fragments.helpers.GestureMapFragment;
+import org.droidplanner.android.utils.Raspberry;
+import org.droidplanner.android.utils.Utils;
+import org.droidplanner.android.utils.prefs.DroidPlannerPrefs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,14 +32,12 @@ import java.util.List;
 /**
  * Created by Kevin Langenkämper
  *
- * This class represents the tool for selection of objects in the map
+ * This class represents the tool for selection of objects on the map
  */
 class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnItemSelectedListener {
 
-    private static double cameraAngleVertical = 97;
-    private double currentSpeed = EditorActivity.DEFAULT_SPEED;
+    private double currentSpeed = CustomEditorActivity.DEFAULT_SPEED;
     private double currentDistance = 0;
-    private int currentRounds = 0;
 
     ObjectSelectionToolsImpl(EditorToolsFragment fragment) {
         super(fragment);
@@ -87,9 +90,9 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
 
                         //region of interest is the middle of the object
                         final MissionItem regionOfInterest = calculateRegionOfInterest(points, settings.heightObject / 2);
-                        final List<LatLongAlt> waypoints = calculateWaypointsForObject(points, settings.heightFlight, settings.heightObject, 97);
+                        final List<LatLongAlt> waypoints = calculateWaypointsForObject(points, settings.heightFlight, settings.heightObject, DroidPlannerPrefs.getInstance(editorToolsFragment.getContext()).getCameraAngle());
 
-                        if(settings.shouldTakePictures){
+                        if(settings.shouldTriggerCamera){
 
                             //calculate the distance of one round
                             final double roundDistance = 2 * MathUtils.getDistance2D(waypoints.get(0), waypoints.get(1)) + 2 *MathUtils.getDistance2D(waypoints.get(1), waypoints.get(2));
@@ -101,27 +104,21 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
                             currentSpeed = calcSpeed(currentDistance,settings.secondsPerPicture, settings.pictureCount);
 
                             //if the calculated speed is too low, more rounds are added
-                            if(currentSpeed < EditorActivity.MIN_SPEED) {
-                                OkDialog.newInstance(editorToolsFragment.getActivity(), "Geringe Geschwindigkeit", String.format("Die berechnete Fluggeschwindigkeit um alle Bilder aufzunehmen liegt mit %.2f m/s unter der vorgeschlagenen Mindestgewschindigkeit von %.2f m/s. Diese wird durch die Erhöhung der Rundenzahl ausgeglichen", currentSpeed, EditorActivity.MIN_SPEED), new OkDialog.Listener() {
+                            if(currentSpeed < CustomEditorActivity.MIN_SPEED) {
+                                OkDialog.newInstance(editorToolsFragment.getActivity(), "Geringe Geschwindigkeit", String.format("Die berechnete Fluggeschwindigkeit um alle Bilder aufzunehmen liegt mit %.2f m/s unter der vorgeschlagenen Mindestgewschindigkeit von %.2f m/s. Diese wird durch die Erhöhung der Rundenzahl ausgeglichen", currentSpeed, CustomEditorActivity.MIN_SPEED), new OkDialog.Listener() {
                                     @Override
                                     public void onOk() {
 
                                         //add rounds while speed is too low
-                                        while(currentSpeed < EditorActivity.MIN_SPEED){
+                                        while(currentSpeed < CustomEditorActivity.MIN_SPEED){
                                             settings.roundCount++;
                                             currentDistance =  settings.roundCount * roundDistance;
                                             currentSpeed = calcSpeed(currentDistance,settings.secondsPerPicture, settings.pictureCount);
-
                                         }
 
-                                        //set camera trigger item with calculated trigger distance
-                                        CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
-                                        double triggerDistance = currentDistance / settings.pictureCount;
-                                        cameraItem.setTriggerDistance(triggerDistance);
-                                        missionProxy.addMissionItem(cameraItem);
+                                        updateSpeedAndRounds(settings.roundCount);
+                                        setWaypoints(settings, regionOfInterest, waypoints, true);
 
-                                        updateSpeedAndRounds();
-                                        setWaypoints(settings, regionOfInterest, waypoints);
                                     }
 
                                     @Override
@@ -135,20 +132,13 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
                                     }
                                 }).show(editorToolsFragment.getFragmentManager(), "MIN_SPEED");
                             }else{
-
-                                //set camera trigger item with calculated trigger distance
-                                CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
-                                double triggerDistance = currentDistance / settings.pictureCount;
-                                cameraItem.setTriggerDistance(triggerDistance);
-                                missionProxy.addMissionItem(cameraItem);
-
-                                updateSpeedAndRounds();
-                                setWaypoints(settings, regionOfInterest, waypoints);
+                                updateSpeedAndRounds(settings.roundCount);
+                                setWaypoints(settings, regionOfInterest, waypoints, true);
                             }
 
                         }else{
-                            updateSpeedAndRounds();
-                            setWaypoints(settings, regionOfInterest, waypoints);
+                            updateSpeedAndRounds(settings.roundCount);
+                            setWaypoints(settings, regionOfInterest, waypoints, false);
                         }
 
                     }
@@ -158,25 +148,49 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
                 if(droneLocation != null){
                     sortWaypoints(droneLocation, points);
                 }
-                dlg.show(editorToolsFragment.getFragmentManager(), "Höhe");
+                dlg.show(editorToolsFragment.getFragmentManager(), "SCAN_SETTINGS");
 
             }
         }
         editorToolsFragment.setTool(EditorToolsFragment.EditorTools.NONE);
     }
 
+
     /***
      * This function generates waypoints for the rounds and saves the mission items
      * @param settings scan setting that where set in the dialog
-     * @param cameraItem camera trigger item
+     * @param regionOfInterest region of interest (location where camera should look at)
      * @param waypoints list of waypoints
+     * @param addCameraTrigger true, if camera should be triggered camera trigger
      */
-    private void setWaypoints(ScanSettingsDialog.Settings settings, MissionItem cameraItem, List<LatLongAlt> waypoints) {
+    private void setWaypoints(ScanSettingsDialog.Settings settings, MissionItem regionOfInterest, List<LatLongAlt> waypoints, boolean addCameraTrigger ) {
+
+        Raspberry.CaptureType captureType =  Raspberry.CaptureType.values()[DroidPlannerPrefs.getInstance(editorToolsFragment.getContext()).prefs.getInt("capture_type",0)];
+
+        if(addCameraTrigger){
+            if(captureType == Raspberry.CaptureType.SingleShot) {
+                //if capture type is single shot set camera trigger item with calculated distance
+                CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
+                double triggerDistance =  currentDistance / settings.pictureCount;
+                cameraItem.setTriggerDistance(triggerDistance);
+                missionProxy.addMissionItem(cameraItem);
+            }else{
+                SetRelay relayItem = (SetRelay) MissionItemType.SET_RELAY.getNewItem();
+                relayItem.setEnabled(true);
+                relayItem.setRelayNumber(0);
+                missionProxy.addMissionItem(relayItem);
+            }
+        }
+
 
         int waypointCount = waypoints.size();
         double riseAltitude = 0;
         for(int round = 1; round < settings.roundCount; round++){
             riseAltitude += settings.risePerRound;
+
+            //Add the first waypoint again, that the whole round is made on the same height
+            waypoints.add(new LatLongAlt(waypoints.get(0)));
+
             for(int i = 0; i < waypointCount; i++) {
                 LatLongAlt wp = new LatLongAlt(waypoints.get(i));
                 wp.setAltitude(wp.getAltitude() + riseAltitude);
@@ -185,9 +199,17 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
         }
 
 
-        missionProxy.addMissionItem(cameraItem);
+        missionProxy.addMissionItem(regionOfInterest);
         missionProxy.addWaypointsWithAltitude(waypoints);
         missionProxy.addWaypoint(waypoints.get(0));
+
+        //Add Cameratrigger Item with distance 0 to stop triggering
+        if(addCameraTrigger){
+
+            CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
+            cameraItem.setTriggerDistance(0);
+            missionProxy.addMissionItem(cameraItem);
+        }
 
         addTakeOffAndRTL(settings.heightFlight);
     }
@@ -202,7 +224,7 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
      * @return
      */
     private double calcSpeed(double flightdistance, double secondsPerPicture, int pictureCount){
-        return Math.min(EditorActivity.MAX_SPEED, flightdistance / (secondsPerPicture * pictureCount));
+        return Math.min(CustomEditorActivity.MAX_SPEED, flightdistance / (secondsPerPicture * pictureCount));
     }
 
     /***
@@ -280,8 +302,8 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
     /**
      * This function updates speed and rounds in the UI
      */
-    private void updateSpeedAndRounds(){
-        ((EditorActivity) editorToolsFragment.getActivity()).setSpeedAndRounds( currentSpeed, currentRounds);
+    private void updateSpeedAndRounds(int rounds){
+        ((CustomEditorActivity) editorToolsFragment.getActivity()).setSpeedAndRounds( currentSpeed, rounds);
     }
 
     /**

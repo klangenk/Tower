@@ -158,7 +158,7 @@ public abstract class DrawerNavigationUI extends SuperUI implements SlidingDrawe
                 break;
 
             case R.id.navigation_editor:
-                mNavigationIntent = new Intent(this, EditorActivity.class);
+                mNavigationIntent = new Intent(this, CustomEditorActivity.class);
                 break;
 
             case R.id.navigation_locator:
