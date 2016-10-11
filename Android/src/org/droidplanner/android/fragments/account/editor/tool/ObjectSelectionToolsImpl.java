@@ -165,7 +165,7 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
      */
     private void setWaypoints(ScanSettingsDialog.Settings settings, MissionItem regionOfInterest, List<LatLongAlt> waypoints, boolean addCameraTrigger ) {
 
-        Raspberry.CaptureType captureType =  Raspberry.CaptureType.values()[DroidPlannerPrefs.getInstance(editorToolsFragment.getContext()).prefs.getInt("capture_type",0)];
+        Raspberry.CaptureType captureType =  Raspberry.CaptureType.values()[DroidPlannerPrefs.getInstance(editorToolsFragment.getContext()).getCaptureType()];
 
         if(addCameraTrigger){
             if(captureType == Raspberry.CaptureType.SingleShot) {
@@ -175,10 +175,20 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
                 cameraItem.setTriggerDistance(triggerDistance);
                 missionProxy.addMissionItem(cameraItem);
             }else{
-                SetRelay relayItem = (SetRelay) MissionItemType.SET_RELAY.getNewItem();
+                /*SetRelay relayItem = (SetRelay) MissionItemType.SET_RELAY.getNewItem();
                 relayItem.setEnabled(true);
                 relayItem.setRelayNumber(0);
-                missionProxy.addMissionItem(relayItem);
+                missionProxy.addMissionItem(relayItem);*/
+
+                CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
+                double triggerDistance =  999;
+                cameraItem.setTriggerDistance(triggerDistance);
+                missionProxy.addMissionItem(cameraItem);
+
+                /*relayItem = (SetRelay) MissionItemType.SET_RELAY.getNewItem();
+                relayItem.setEnabled(false);
+                relayItem.setRelayNumber(0);
+                missionProxy.addMissionItem(relayItem);*/
             }
         }
 
@@ -205,10 +215,26 @@ class ObjectSelectionToolsImpl extends DrawToolsImpl implements AdapterView.OnIt
 
         //Add Cameratrigger Item with distance 0 to stop triggering
         if(addCameraTrigger){
+            if(captureType == Raspberry.CaptureType.SingleShot) {
+                CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
+                cameraItem.setTriggerDistance(0);
+                missionProxy.addMissionItem(cameraItem);
+            }else{
+                /*SetRelay relayItem = (SetRelay) MissionItemType.SET_RELAY.getNewItem();
+                relayItem.setEnabled(false);
+                relayItem.setRelayNumber(0);
+                missionProxy.addMissionItem(3, relayItem);
 
-            CameraTrigger cameraItem = (CameraTrigger) MissionItemType.CAMERA_TRIGGER.getNewItem();
-            cameraItem.setTriggerDistance(0);
-            missionProxy.addMissionItem(cameraItem);
+                relayItem = (SetRelay) MissionItemType.SET_RELAY.getNewItem();
+                relayItem.setEnabled(true);
+                relayItem.setRelayNumber(0);
+                missionProxy.addMissionItem(relayItem);
+
+                relayItem = (SetRelay) MissionItemType.SET_RELAY.getNewItem();
+                relayItem.setEnabled(false);
+                relayItem.setRelayNumber(0);
+                missionProxy.addMissionItem(relayItem);*/
+            }
         }
 
         addTakeOffAndRTL(settings.heightFlight);
